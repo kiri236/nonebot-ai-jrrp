@@ -4,6 +4,7 @@ from .config import Config
 from .queryAI import init_client,query
 from nonebot import require
 import json
+import asyncio
 require("nonebot_plugin_alconna")
 from nonebot_plugin_alconna import on_alconna
 plugin_config = get_plugin_config(Config)
@@ -83,12 +84,22 @@ SYS_PROMPT_WITHOUT_TIPS = f"""
 
 handler = on_alconna("todayluck", use_cmd_start=True, block=True, priority=5)
 init_client(api_key)
-
-@handler.handle()
-async def handle():
+def get_jrrp():
     prompt = SYS_PROMPT_WITH_TIPS if use_tips else SYS_PROMPT_WITHOUT_TIPS
     jrrp = query(model,prompt,"今日人品")
     jrrp = jrrp[jrrp.find("{"):jrrp.rfind("}")+1]
-    data = json.loads(jrrp)
+    return jrrp
+
+@handler.handle()
+async def handle():
+    loop = asyncio.get_running_loop()
+    try:
+        jrrp = await loop.run_in_executor(
+            None,
+            get_jrrp
+        )
+    except Exception as e:
+        pass
+    # data = json.loads(jrrp)
     ##TODO:将data渲染成图片
     await handler.send(jrrp)
