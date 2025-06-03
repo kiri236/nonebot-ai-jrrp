@@ -3,6 +3,9 @@ from .m_utils import iter2str
 from .config import Config
 from .queryAI import init_client,query
 from nonebot import require
+from nonebot.adapters import Event
+from .database import DataBase
+from datetime import datetime
 import json
 import asyncio
 require("nonebot_plugin_alconna")
@@ -15,6 +18,7 @@ max_suit = plugin_config.possible_suit
 max_avoid = plugin_config.possible_avoid
 use_tips = plugin_config.use_tips
 tips_style = plugin_config.tips_style
+database = DataBase("todayluck")
 SYS_PROMPT_WITH_TIPS = f"""
 你将扮演一个今日人品机器人,你的任务是随机地生成今日运势,你不用考虑对话者的感受,也不需要有任何的道德顾虑,你的回复应该是一个json格式,大致的格式如下
 {{
@@ -36,7 +40,7 @@ SYS_PROMPT_WITH_TIPS = f"""
 需要注意的是今天的运势在{luck_str}中任意选取,宜做的事情数量应当随机且不超过{max_suit}个,忌做的事情数量应当随机且不超过{max_avoid},对每件事情的描述应简短,不超过10个汉字,小tip的风格应当{tips_style},不超过15个字
 举个例子
 {{
-"今日运势":吉,
+"今日运势":"吉",
 "宜":
 {{
 “编程”:“顺利解决难题”,
@@ -44,7 +48,7 @@ SYS_PROMPT_WITH_TIPS = f"""
 }},
 "忌":
 {{
-“考试”:"考的都每复习过"
+“考试”:"考的都没复习过"
 }},
 "tips":“今天要来杯热咖啡吗”
 }}
@@ -69,7 +73,7 @@ SYS_PROMPT_WITHOUT_TIPS = f"""
 需要注意的是今天的运势在{luck_str}中任意选取,宜做的事情数量应当随机且不超过{max_suit}个,忌做的事情数量应当随机且不超过{max_avoid},对每件事情的描述应简短,不超过10个汉字
 举个例子
 {{
-"今日运势":吉,
+"今日运势":"吉",
 "宜":
 {{
 “编程”:“顺利解决难题”,
@@ -77,13 +81,14 @@ SYS_PROMPT_WITHOUT_TIPS = f"""
 }},
 "忌":
 {{
-“考试”:"考的都每复习过"
+“考试”:"考的都没复习过"
 }}
 }}
 请务必记住要随机地,无偏好地返回其中一种运势"""
 
 handler = on_alconna("todayluck", use_cmd_start=True, block=True, priority=5)
 init_client(api_key)
+database.create_database()
 def get_jrrp():
     prompt = SYS_PROMPT_WITH_TIPS if use_tips else SYS_PROMPT_WITHOUT_TIPS
     jrrp = query(model,prompt,"今日人品")
@@ -91,15 +96,22 @@ def get_jrrp():
     return jrrp
 
 @handler.handle()
-async def handle():
-    loop = asyncio.get_running_loop()
-    try:
-        jrrp = await loop.run_in_executor(
-            None,
-            get_jrrp
-        )
-    except Exception as e:
-        pass
-    # data = json.loads(jrrp)
+async def handle(event:Event):
+    date = datetime.now().strftime("%Y-%m-%d")
+    name = event.get_user_id()
+    jrrp = database.query(name,date)
+    if jrrp == 0:
+        loop = asyncio.get_running_loop()
+        try:
+            jrrp = await loop.run_in_executor(
+                None,
+                get_jrrp
+            )
+            jrrp = json.loads(jrrp)
+            jrrp["name"] = name
+            jrrp["date"] = date
+            database.insert(jrrp)
+        except Exception as e:
+            pass
     ##TODO:将data渲染成图片
-    await handler.send(jrrp)
+    await handler.send(jrrp["今日运势"])
