@@ -14,7 +14,7 @@ require("nonebot_plugin_alconna")
 require("nonebot_plugin_htmlrender")
 require("nonebot_plugin_userinfo")
 from nonebot_plugin_alconna import on_alconna
-from nonebot_plugin_userinfo import UserInfo,get_user_info
+from nonebot_plugin_userinfo import get_user_info
 plugin_config = get_plugin_config(Config)
 model = plugin_config.model
 api_key = plugin_config.api_key
@@ -47,7 +47,6 @@ async def handle(event:Event):
             database.insert(jrrp)
         except Exception as e:
             pass
-    ##TODO:将data渲染成图片
     bot = current_bot.get()
     user_info = await get_user_info(bot,event,name)
     jrrp["name"] = user_info.user_displayname
