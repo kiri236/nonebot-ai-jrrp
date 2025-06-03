@@ -1,15 +1,20 @@
 from nonebot import get_plugin_config
+from nonebot.matcher import current_bot
 from .config import Config
 from .queryAI import init_client,query
 from .prompt import SYS_PROMPT_WITH_TIPS,SYS_PROMPT_WITHOUT_TIPS,use_tips
+from .render import render_jrrp, render_jrrp_jinja
 from nonebot import require
-from nonebot.adapters import Event
+from nonebot.adapters.onebot.v11 import Event,MessageSegment
 from .database import DataBase
 from datetime import datetime
 import json
 import asyncio
 require("nonebot_plugin_alconna")
+require("nonebot_plugin_htmlrender")
+require("nonebot_plugin_userinfo")
 from nonebot_plugin_alconna import on_alconna
+from nonebot_plugin_userinfo import UserInfo,get_user_info
 plugin_config = get_plugin_config(Config)
 model = plugin_config.model
 api_key = plugin_config.api_key
@@ -43,4 +48,8 @@ async def handle(event:Event):
         except Exception as e:
             pass
     ##TODO:将data渲染成图片
-    await handler.send(jrrp["今日运势"])
+    bot = current_bot.get()
+    user_info = await get_user_info(bot,event,name)
+    jrrp["name"] = user_info.user_displayname
+    pic = await render_jrrp_jinja(jrrp)
+    await handler.send(MessageSegment.image(pic))
