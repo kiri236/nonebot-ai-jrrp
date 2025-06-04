@@ -5,7 +5,7 @@ from .queryAI import init_client,query
 from .prompt import SYS_PROMPT_WITH_TIPS,SYS_PROMPT_WITHOUT_TIPS,use_tips
 from .render import render_jrrp, render_jrrp_jinja
 from nonebot import require
-from nonebot.adapters.onebot.v11 import Event,MessageSegment
+from nonebot.adapters.onebot.v11 import MessageSegment,MessageEvent
 from .database import DataBase
 from datetime import datetime
 import json
@@ -30,7 +30,7 @@ def get_jrrp():
     return jrrp
 
 @handler.handle()
-async def handle(event:Event):
+async def handle(event:MessageEvent):
     date = datetime.now().strftime("%Y-%m-%d")
     name = event.get_user_id()
     jrrp = database.query(name,date)
@@ -47,8 +47,6 @@ async def handle(event:Event):
             database.insert(jrrp)
         except Exception as e:
             pass
-    bot = current_bot.get()
-    user_info = await get_user_info(bot,event,name)
-    jrrp["name"] = user_info.user_displayname
+    jrrp["name"] = event.sender.nickname
     pic = await render_jrrp_jinja(jrrp)
     await handler.send(MessageSegment.image(pic))
