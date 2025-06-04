@@ -1,5 +1,4 @@
 from nonebot import get_plugin_config
-from nonebot.matcher import current_bot
 from .config import Config
 from .queryAI import init_client,query
 from .prompt import SYS_PROMPT_WITH_TIPS,SYS_PROMPT_WITHOUT_TIPS,use_tips
@@ -14,7 +13,6 @@ require("nonebot_plugin_alconna")
 require("nonebot_plugin_htmlrender")
 require("nonebot_plugin_userinfo")
 from nonebot_plugin_alconna import on_alconna
-from nonebot_plugin_userinfo import get_user_info
 plugin_config = get_plugin_config(Config)
 model = plugin_config.model
 api_key = plugin_config.api_key
@@ -46,7 +44,7 @@ async def handle(event:MessageEvent):
             jrrp["date"] = date
             database.insert(jrrp)
         except Exception as e:
-            pass
+            print(f"Error {e}")
     jrrp["name"] = event.sender.nickname
     pic = await render_jrrp_jinja(jrrp)
     await handler.send(MessageSegment.image(pic))
